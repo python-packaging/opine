@@ -1,4 +1,5 @@
 PYTHON?=python
+SOURCES=opine setup.py
 
 .PHONY: venv
 venv:
@@ -15,18 +16,23 @@ setup:
 
 .PHONY: test
 test:
-	which python
-	python -m coverage run -m opine.tests
-	python -m coverage report --fail-under=99
+	python -m coverage run -m opine.tests $(TESTOPTS)
+	python -m coverage report
+
+.PHONY: format
+format:
+	python -m isort --recursive -y $(SOURCES)
+	python -m black $(SOURCES)
 
 .PHONY: lint
 lint:
-	isort --recursive -y opine setup.py
-	black opine setup.py
+	python -m isort --recursive --diff $(SOURCES)
+	python -m black --check $(SOURCES)
+	python -m flake8 $(SOURCES)
+	mypy --strict opine
 
 .PHONY: release
 release:
-	pip install -U wheel
 	rm -rf dist
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
