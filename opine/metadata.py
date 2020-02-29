@@ -3,41 +3,79 @@ This is mostly compatible with pkginfo's metadata classes.
 """
 
 import json
-import sys
 import logging
-import libcst as cst
-from typing import Dict, Any
-
+import sys
+import traceback
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, Optional, Sequence, Tuple
+
+import libcst as cst
 import pkginfo.distribution
+from libcst.metadata import ParentNodeProvider, QualifiedNameProvider, ScopeProvider
 
 LOG = logging.getLogger(__name__)
 
-class Distribution(pkginfo.distribution.Distribution):
-    # These are not actually part of the metadata, see PEP 566
-    setup_requires = ()
 
-    def _getHeaderAttrs(self):
+# TODO: pkginfo isn't typed
+class Distribution(pkginfo.distribution.Distribution):  # type: ignore
+    # These are not actually part of the metadata, see PEP 566
+    setup_requires: Sequence[str] = ()
+    tests_require: Sequence[str] = ()
+    extras_require: Dict[str, Sequence[str]] = {}
+    use_scm_version: Optional[bool] = None
+    zip_safe: Optional[bool] = None
+    include_package_data: Optional[bool] = None
+    test_suite: str = ""
+    namespace_packages: Sequence[str] = ()
+
+    def _getHeaderAttrs(self) -> Sequence[Tuple[str, str, bool]]:
         # Until I invent a metadata version to include this, do so
         # unconditionally.
-        return super()._getHeaderAttrs() + (
-            ("Requires-Setup", "setup_requires", True),
+        return tuple(super()._getHeaderAttrs()) + (
+            ("Setup-Requires", "setup_requires", True),
+            ("Tests-Require", "tests_require", True),
+            ("???", "extras_require", False),
+            ("Use-SCM-Version", "use_scm_version", False),
+            ("Zip-Safe", "zip_safe", False),
+            ("Test-Suite", "test_suite", False),
+            ("Include-Package-Data", "include_package_data", False),
+            ("Namespace-Package", "namespace_packages", True),
         )
 
 
 # setup(kwarg=) -> Distribution key
 MAPPING = {
-    'name': 'name',
-    'version': 'version',
-    'author': 'author',
-    'license': 'license',
-    'description': 'summary',
-    'long_description': 'description',
-    'long_description_content_type': 'description_content_type',
-
-    'install_requires': 'requires_dist',
-    'requires': 'requires',
+    "name": "name",
+    "version": "version",
+    "author": "author",
+    "author_email": "author_email",
+    "maintainer": "maintainer",
+    "maintainer_email": "maintainer_email",
+    "license": "license",
+    "description": "summary",
+    "long_description": "description",
+    "long_description_content_type": "description_content_type",
+    "install_requires": "requires_dist",
+    "requires": "requires",
+    "python_requires": "requires_python",
+    "url": "home_page",
+    "download_url": "download_url",
+    "project_urls": "project_urls",
+    "keywords": "keywords",
+    "license": "license",
+    "platforms": "platforms",
+    "use_scm_version": "use_scm_version",
+    "setup_requires": "setup_requires",
+    "tests_require": "tests_require",
+    "extras_require": "extras_require",
+    "classifiers": "classifiers",
+    "zip_safe": "zip_safe",
+    "test_suite": "test_suite",
+    "include_package_data": "include_package_data",
+    "namespace_packages": "namespace_packages",
 }
+
 
 def from_setup_py(path: Path, markers: Dict[str, Any]) -> Distribution:
     """
@@ -64,43 +102,198 @@ def from_setup_py(path: Path, markers: Dict[str, Any]) -> Distribution:
     d = Distribution()
     d.metadata_version = "2.1"
 
-    for stmt in module.children:
-        # TODO: This could be a match more clearly
-        if (
-            isinstance(stmt, cst.SimpleStatementLine)
-            and isinstance(stmt.body[0], cst.Expr)
-            and isinstance(stmt.body[0].value, cst.Call)
-            and isinstance(stmt.body[0].value.func, cst.Name)
-            and stmt.body[0].value.func.value == "setup"
-        ):
-            for arg in stmt.body[0].value.args:
-                if isinstance(arg.keyword, cst.Name) and arg.keyword.value in MAPPING:
-                    key = arg.keyword.value
-                    # TODO generalize this to an eval_in_scope that handles list
-                    # comp too
-                    if isinstance(arg.value, cst.SimpleString):
-                        setattr(d, MAPPING[key], arg.value.evaluated_value)
-                    elif isinstance(arg.value, (cst.Tuple, cst.List)):
-                        lst = []
-                        for el in arg.value.elements:
-                            if isinstance(el.value, cst.SimpleString):
-                                lst.append(el.value.evaluated_value)
-                            else:
-                                LOG.warning(f"Non-SimpleString {el!r}")
-                        setattr(d, MAPPING[key], lst)
-                    else:
-                        LOG.warning(f"Want to store {key!r} but type is {type(arg.value)}")
-            break
-    else:
-        # TODO: Should also warn when more than one
-        raise SyntaxError("No simple setup() call found")
+    analyzer = SetupCallAnalyzer()
+    wrapper = cst.MetadataWrapper(module)
+    wrapper.visit(analyzer)
+    if not analyzer.found_setup:
+        raise SyntaxError("No simple setup call found")
+
+    for k, v in analyzer.saved_args.items():
+        if k in MAPPING:
+            if isinstance(v, Literal):
+                setattr(d, MAPPING[k], v.value)
+            else:
+                LOG.warning(f"Want to save {k} but is {type(v)}")
+        else:
+            LOG.warning(f"Specified {k} but we don't store it")
 
     return d
 
-def main():
-    dist = from_setup_py(Path(sys.argv[1]), {})
-    print(json.dumps({k: getattr(dist, k) for k in list(dist) if getattr(dist,
-    k)}, indent=2))
+
+@dataclass
+class TooComplicated:
+    reason: str
+
+
+@dataclass
+class Sometimes:
+    # TODO list of 'when' and 'else'
+    pass
+
+
+@dataclass
+class Literal:
+    value: Any
+    cst_node: cst.CSTNode
+
+
+class FileReference:
+    def __init__(self, filename: str) -> None:
+        self.filename = filename
+
+
+class SetupCallAnalyzer(cst.CSTVisitor):
+    METADATA_DEPENDENCIES = (ScopeProvider, ParentNodeProvider, QualifiedNameProvider)  # type: ignore
+
+    # TODO names resulting from other than 'from setuptools import setup'
+    # TODO wrapper funcs that modify args
+    # TODO **args
+    def __init__(self) -> None:
+        super().__init__()
+        # TODO Union[TooComplicated, Sometimes, Literal, FileReference]
+        self.saved_args: Dict[str, Any] = {}
+        self.found_setup = False
+
+    def visit_Call(self, node: cst.Call) -> Optional[bool]:
+        names = self.get_metadata(QualifiedNameProvider, node)
+        # TODO sometimes there is more than one setup call, we might
+        # prioritize/merge...
+        if any(
+            q.name in ("setuptools.setup", "distutils.core.setup", "setup3lib")
+            for q in names
+        ):
+            self.found_setup = True
+            scope = self.get_metadata(ScopeProvider, node)
+            for arg in node.args:
+                # TODO **kwargs
+                if isinstance(arg.keyword, cst.Name):
+                    key = arg.keyword.value
+                    value = self.evaluate_in_scope(arg.value, scope)
+                    self.saved_args[key] = Literal(value, arg)
+                elif arg.star == "**":
+                    # kwargs
+                    d = self.evaluate_in_scope(arg.value, scope)
+                    if isinstance(d, dict):
+                        for k, v in d.items():
+                            self.saved_args[k] = Literal(v, None)
+                    else:
+                        # GRR
+                        pass
+                else:
+                    raise ValueError(repr(arg))
+
+            return False
+
+        return None
+
+    BOOL_NAMES = {"True": True, "False": False, "None": None}
+    PRETEND_ARGV = ["setup.py", "bdist_wheel"]
+
+    def evaluate_in_scope(self, item: cst.CSTNode, scope: Any) -> Any:
+        if isinstance(item, cst.SimpleString):
+            return item.evaluated_value
+        # TODO int/float/etc
+        elif isinstance(item, cst.Name) and item.value in self.BOOL_NAMES:
+            return self.BOOL_NAMES[item.value]
+        elif isinstance(item, cst.Name):
+            name = item.value
+            assignments = scope[name]
+            for a in assignments:
+                # TODO: Only assignments "before" this node matter if in the
+                # same scope; really if we had a call graph and walked the other
+                # way, we could have a better idea of what has already happened.
+
+                # Assign(
+                #   targets=[AssignTarget(target=Name(value="v"))],
+                #   value=SimpleString(value="'x'"),
+                # )
+                # TODO or an import...
+                # TODO builtins have BuiltinAssignment
+                try:
+                    gp = self.get_metadata(
+                        ParentNodeProvider,
+                        self.get_metadata(ParentNodeProvider, a.node),
+                    )
+                except (KeyError, AttributeError):
+                    return "??"
+
+                # This presumes a single assignment
+                if not hasattr(gp, "targets") or len(gp.targets) != 1:
+                    return "??"  # TooComplicated(repr(gp))
+
+                try:
+                    scope = self.get_metadata(ScopeProvider, gp)
+                except KeyError:
+                    # module scope isn't in the dict
+                    return "??"
+
+                return self.evaluate_in_scope(gp.value, scope)
+        elif isinstance(item, (cst.Tuple, cst.List)):
+            lst = []
+            for el in item.elements:
+                lst.append(
+                    self.evaluate_in_scope(
+                        el.value, self.get_metadata(ScopeProvider, el)
+                    )
+                )
+            if isinstance(item, cst.Tuple):
+                return tuple(lst)
+            else:
+                return lst
+        elif (
+            isinstance(item, cst.Call)
+            and isinstance(item.func, cst.Name)
+            and item.func.value == "dict"
+        ):
+            d = {}
+            for arg in item.args:
+                if isinstance(arg.keyword, cst.Name):
+                    d[arg.keyword.value] = self.evaluate_in_scope(arg.value, scope)
+                # TODO something with **kwargs
+            return d
+        elif isinstance(item, cst.Dict):
+            d = {}
+            for el in item.elements:
+                d[self.evaluate_in_scope(el.key, scope)] = self.evaluate_in_scope(
+                    el.value, scope
+                )
+            return d
+        elif isinstance(item, cst.Subscript):
+            lhs = self.evaluate_in_scope(item.value, scope)
+            if isinstance(lhs, str):
+                # A "??" entry, propagate
+                return "??"
+
+            # TODO: Figure out why this is Sequence
+            if isinstance(item.slice[0].slice, cst.Index):
+                rhs = self.evaluate_in_scope(item.slice[0].slice.value, scope)
+                return lhs.get(rhs, "??")
+            else:
+                LOG.warning(f"Omit2 {type(item.slice[0].slice)!r}")
+                return "??"
+        else:
+            LOG.warning(f"Omit1 {type(item)!r}")
+            return "??"
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.DEBUG)
+    for path in sys.argv[1:]:
+        try:
+            dist = from_setup_py(Path(path), {})
+            value = {
+                "path": path,
+            }
+
+            for k in list(dist):
+                if getattr(dist, k):
+                    value[k] = getattr(dist, k)
+
+            print(json.dumps(value, indent=2,))
+        except Exception as e:
+            traceback.print_exc(file=sys.stderr)
+            print(f"Fail: {path}\n{e!r}", file=sys.stderr)
+
 
 if __name__ == "__main__":
     main()

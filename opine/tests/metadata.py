@@ -1,49 +1,157 @@
-from pathlib import Path
-
 import tempfile
 import unittest
+from pathlib import Path
+from typing import Any
 
-from opine.metadata import Distribution, from_setup_py
+import libcst as cst
+from libcst.metadata import ParentNodeProvider, QualifiedNameProvider, ScopeProvider
+from parameterized import parameterized
+
+from opine.metadata import Distribution, SetupCallAnalyzer, from_setup_py
+
 
 class DistributionTest(unittest.TestCase):
-    def test_added_item_in_iter(self):
+    def test_added_item_in_iter(self) -> None:
         d = Distribution()
         d.setup_requires = ["a", "b"]
         self.assertIn("setup_requires", list(d))
 
+
 class MetadataTest(unittest.TestCase):
-    def _read(self, data: str):
+    def _read(self, data: str) -> Distribution:
         with tempfile.TemporaryDirectory() as d:
             sp = Path(d, "setup.py")
             sp.write_text(data)
             return from_setup_py(Path(d), {})
 
-    def test_smoke(self):
-        d = self._read("""\
+    def test_smoke(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
 setup(
     name="foo",
     version="0.1",
 )
-""")
+"""
+        )
         self.assertEqual("foo", d.name)
         self.assertEqual("0.1", d.version)
 
-    def test_lists(self):
-        d = self._read("""\
+    def test_smoke_as_import(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup as x
+x(
+    name="foo",
+)
+"""
+        )
+        self.assertEqual("foo", d.name)
+
+    def test_smoke_unknown_fail(self) -> None:
+        with self.assertRaises(SyntaxError):
+            self._read(
+                """\
+setup(
+    name="foo",
+)
+"""
+            )
+
+    def test_lists(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
 setup(
     requires=["a", "b"],
 )
-""")
+"""
+        )
         self.assertEqual(["a", "b"], d.requires)
 
-    def test_tuples(self):
-        d = self._read("""\
+    def test_tuples(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
 setup(
     requires=("a", "b"),
 )
-""")
-        # TODO: Type
-        self.assertEqual(["a", "b"], d.requires)
+"""
+        )
+        self.assertEqual(("a", "b"), d.requires)
+
+    def test_bool(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
+setup(
+    include_package_data=True,
+)
+"""
+        )
+        self.assertEqual(True, d.include_package_data)
+
+    def test_local(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
+v = "0.1"
+setup(
+    version=v,
+)
+"""
+        )
+        self.assertEqual("0.1", d.version)
+
+    def test_global(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
+v = "0.1"
+def foo():
+    setup(
+        version=v,
+    )
+"""
+        )
+        self.assertEqual("0.1", d.version)
+
+    def test_dict(self) -> None:
+        d = self._read(
+            """\
+from setuptools import setup
+d = dict(version = "0.1")
+def foo():
+    setup(**d)
+"""
+        )
+        self.assertEqual("0.1", d.version)
+
+
+class EvaluateTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("final = 'x'", "x"),
+            ("a='x'; final=a", "x"),
+            ("a={'y': 'x'}; final=a['y']", "x"),
+        ]
+    )
+    def test_evaluate(self, input: str, expected: Any) -> None:
+        module = cst.parse_module(input)
+        analyzer = SetupCallAnalyzer()
+
+        wrapper = cst.MetadataWrapper(module)
+        wrapper.visit(analyzer)
+
+        # TODO: MetadataDependent.resolve clears self.metadata
+        analyzer.metadata = {
+            ScopeProvider: wrapper.resolve(ScopeProvider),
+            ParentNodeProvider: wrapper.resolve(ParentNodeProvider),
+        }
+        # TODO: picks an arbitrary scope
+        scope = next(iter(analyzer.metadata[ScopeProvider].values()))
+        actual = analyzer.evaluate_in_scope(cst.Name(value="final"), scope)
+        self.assertEqual(expected, actual)
 
 
 if __name__ == "__main__":
