@@ -134,7 +134,7 @@ class Sometimes:
 @dataclass
 class Literal:
     value: Any
-    cst_node: cst.CSTNode
+    cst_node: Optional[cst.CSTNode]
 
 
 class FileReference:
@@ -210,15 +210,20 @@ class SetupCallAnalyzer(cst.CSTVisitor):
                 # TODO or an import...
                 # TODO builtins have BuiltinAssignment
                 try:
-                    gp = self.get_metadata(
-                        ParentNodeProvider,
-                        self.get_metadata(ParentNodeProvider, a.node),
-                    )
+                    node = a.node
+                    if node:
+                        parent = self.get_metadata(ParentNodeProvider, node)
+                        if parent:
+                            gp = self.get_metadata(ParentNodeProvider, parent)
+                        else:
+                            raise KeyError
+                    else:
+                        raise KeyError
                 except (KeyError, AttributeError):
                     return "??"
 
                 # This presumes a single assignment
-                if not hasattr(gp, "targets") or len(gp.targets) != 1:
+                if not isinstance(gp, cst.Assign) or len(gp.targets) != 1:
                     return "??"  # TooComplicated(repr(gp))
 
                 try:
@@ -253,10 +258,11 @@ class SetupCallAnalyzer(cst.CSTVisitor):
             return d
         elif isinstance(item, cst.Dict):
             d = {}
-            for el in item.elements:
-                d[self.evaluate_in_scope(el.key, scope)] = self.evaluate_in_scope(
-                    el.value, scope
-                )
+            for el2 in item.elements:
+                if isinstance(el2, cst.DictElement):
+                    d[self.evaluate_in_scope(el2.key, scope)] = self.evaluate_in_scope(
+                        el2.value, scope
+                    )
             return d
         elif isinstance(item, cst.Subscript):
             lhs = self.evaluate_in_scope(item.value, scope)

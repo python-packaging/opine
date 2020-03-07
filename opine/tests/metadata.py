@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import libcst as cst
-from libcst.metadata import ParentNodeProvider, QualifiedNameProvider, ScopeProvider
+from libcst.metadata import ParentNodeProvider, ScopeProvider
 from parameterized import parameterized
 
 from opine.metadata import Distribution, SetupCallAnalyzer, from_setup_py
@@ -129,7 +129,7 @@ def foo():
 
 
 class EvaluateTest(unittest.TestCase):
-    @parameterized.expand(
+    @parameterized.expand(  # type: ignore
         [
             ("final = 'x'", "x"),
             ("a='x'; final=a", "x"),
