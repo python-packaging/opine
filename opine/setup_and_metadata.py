@@ -33,7 +33,9 @@ SETUP_ARGS = [
     # requires
     # obsoletes
     ConfigField(
-        "classifiers", SetupCfg("metadata", "classifiers", writer_cls=ListSemiWriter)
+        "classifiers",
+        SetupCfg("metadata", "classifiers", writer_cls=ListSemiWriter),
+        sample_value=None,
     ),
     # download_url
     # Metadata 1.1
@@ -52,7 +54,7 @@ SETUP_ARGS = [
     ConfigField(
         "project_urls",
         SetupCfg("metadata", "project_urls", writer_cls=DictWriter),
-        sample_value={"Bugtracker": "http://example.com"},
+        sample_value=None,  # {"Bugtracker": "http://example.com"},
     ),
     # requires_dist
     # provides_dist (rarely used)
@@ -71,13 +73,18 @@ SETUP_ARGS = [
     ConfigField(
         "setup_requires",
         SetupCfg("options", "setup_requires", writer_cls=ListSemiWriter),
+        sample_value=None,
     ),
-    # install_requires list-semi
+    ConfigField(
+        "install_requires",
+        SetupCfg("options", "install_requires", writer_cls=ListSemiWriter),
+        sample_value=None,
+    ),
     # tests_require list-semi
     ConfigField(
         "include_package_data",
         SetupCfg("options", "include_package_data", writer_cls=BoolWriter),
-        sample_value=True,
+        sample_value=None,  # True,
     ),
     #
     # extras_require (section)

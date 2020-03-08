@@ -42,22 +42,12 @@ def egg_info(files: Dict[str, str]) -> Dict[str, str]:
 
 class SetupArgsTest(unittest.TestCase):
     @parameterized.expand(  # type: ignore
-        [
-            (t,)
-            for t in SETUP_ARGS
-            if t.keyword
-            not in (
-                "project_urls",
-                "include_package_data",
-                "setup_requires",
-                "classifiers",
-            )
-        ]
+        [(t,) for t in SETUP_ARGS if t.sample_value is not None]
     )
     def test_arg_mapping(self, field: ConfigField) -> None:
         # Tests that the same arg from setup.py or setup.cfg makes it into
         # metadata in the same way.
-        foo = field.sample_value or "foo"
+        foo = field.sample_value
         setup_py = egg_info(
             {
                 "setup.py": "from setuptools import setup\n"

@@ -45,7 +45,7 @@ class UseDeclarativeSuggestion(BaseSuggestion):
             cfg_data = ""
 
         cfg = imperfect.parse_string(
-            cfg_data + "\n" if not cfg_data.endswith("\n") else ""
+            cfg_data + ("\n" if not cfg_data.endswith("\n") else "")
         )
         setup_args_dict = {t.keyword: t for t in SETUP_ARGS}
         keywords_to_remove = set()

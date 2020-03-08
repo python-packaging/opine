@@ -65,4 +65,4 @@ class ConfigField:
     keyword: str
     # TODO type/repeated/etc
     cfg: SetupCfg
-    sample_value: Optional[Any] = None
+    sample_value: Optional[Any] = "foo"
