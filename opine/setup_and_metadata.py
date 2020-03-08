@@ -1,4 +1,4 @@
-from .types import BoolWriter, ConfigField, DictWriter, SetupCfg, ListSemiWriter
+from .types import BoolWriter, ConfigField, DictWriter, ListSemiWriter, SetupCfg
 
 # Not all of these are in the metadata, but for ones that are see
 # https://packaging.python.org/specifications/core-metadata/ for version added
@@ -32,7 +32,9 @@ SETUP_ARGS = [
     # provides
     # requires
     # obsoletes
-    # classifiers
+    ConfigField(
+        "classifiers", SetupCfg("metadata", "classifiers", writer_cls=ListSemiWriter)
+    ),
     # download_url
     # Metadata 1.1
     # supported-platform (binary only?)

@@ -1,42 +1,43 @@
 from dataclasses import dataclass
-from typing import Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 
 # These implement the basic types listed at
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#specifying-values
 class BaseWriter:
-    pass
+    def to_ini(self, value: Any) -> str:
+        raise NotImplementedError
 
 
 class StrWriter(BaseWriter):
-    def to_ini(self, value):
+    def to_ini(self, value: str) -> str:
         return value
 
 
 class ListCommaWriter(BaseWriter):
-    def to_ini(self, value):
+    def to_ini(self, value: List[str]) -> str:
         if not value:
-            return ''
-        return ''.join(f"\n{k}" for k in value)
+            return ""
+        return "".join(f"\n{k}" for k in value)
 
 
 class ListSemiWriter(BaseWriter):
-    def to_ini(self, value):
+    def to_ini(self, value: List[str]) -> str:
         if not value:
-            return ''
-        return ''.join(f"\n{k}" for k in value)
+            return ""
+        return "".join(f"\n{k}" for k in value)
 
 
 class BoolWriter(BaseWriter):
-    def to_ini(self, value):
+    def to_ini(self, value: bool) -> str:
         return "true" if value else "false"
 
 
 class DictWriter(BaseWriter):
-    def to_ini(self, value):
+    def to_ini(self, value: Dict[str, str]) -> str:
         if not value:
-            return ''
-        return ''.join(f"\n{k}={v}" for k, v in value.items())
+            return ""
+        return "".join(f"\n{k}={v}" for k, v in value.items())
 
 
 @dataclass
@@ -64,4 +65,4 @@ class ConfigField:
     keyword: str
     # TODO type/repeated/etc
     cfg: SetupCfg
-    sample_value: Optional[str] = None
+    sample_value: Optional[Any] = None

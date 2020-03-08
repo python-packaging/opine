@@ -8,7 +8,8 @@ from typing import Dict
 
 from parameterized import parameterized
 
-from ..setup_and_metadata import SETUP_ARGS, ConfigField
+from ..setup_and_metadata import SETUP_ARGS
+from ..types import ConfigField
 
 
 def egg_info(files: Dict[str, str]) -> Dict[str, str]:
@@ -40,11 +41,17 @@ def egg_info(files: Dict[str, str]) -> Dict[str, str]:
 
 
 class SetupArgsTest(unittest.TestCase):
-    @parameterized.expand(
+    @parameterized.expand(  # type: ignore
         [
             (t,)
             for t in SETUP_ARGS
-            if t.keyword not in ("project_urls", "include_package_data", "setup_requires")
+            if t.keyword
+            not in (
+                "project_urls",
+                "include_package_data",
+                "setup_requires",
+                "classifiers",
+            )
         ]
     )
     def test_arg_mapping(self, field: ConfigField) -> None:
