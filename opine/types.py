@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Type
 # These implement the basic types listed at
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#specifying-values
 class BaseWriter:
-    def to_ini(self, value: Any) -> str:
+    def to_ini(self, value: Any) -> str:  # pragma: no cover
         raise NotImplementedError
 
 

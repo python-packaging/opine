@@ -142,6 +142,38 @@ class FileReference:
         self.filename = filename
 
 
+class SetupCallTransformer(cst.CSTTransformer):
+    METADATA_DEPENDENCIES = (ScopeProvider, ParentNodeProvider, QualifiedNameProvider)  # type: ignore
+
+    def __init__(
+        self,
+        call_node: cst.CSTNode,
+        keywords_to_change: Dict[str, Optional[cst.CSTNode]],
+    ) -> None:
+        self.call_node = call_node
+        self.keywords_to_change = keywords_to_change
+
+    def leave_Call(
+        self, original_node: cst.Call, updated_node: cst.Call
+    ) -> cst.BaseExpression:
+        if original_node == self.call_node:
+            new_args = []
+            for arg in updated_node.args:
+                if isinstance(arg.keyword, cst.Name):
+                    if arg.keyword.value in self.keywords_to_change:
+                        value = self.keywords_to_change[arg.keyword.value]
+                        if value is not None:
+                            new_args.append(arg.with_changes(value=value))
+                        # else don't append
+                    else:
+                        new_args.append(arg)
+                else:
+                    new_args.append(arg)
+            return updated_node.with_changes(args=new_args)
+
+        return updated_node
+
+
 class SetupCallAnalyzer(cst.CSTVisitor):
     METADATA_DEPENDENCIES = (ScopeProvider, ParentNodeProvider, QualifiedNameProvider)  # type: ignore
 
@@ -153,6 +185,7 @@ class SetupCallAnalyzer(cst.CSTVisitor):
         # TODO Union[TooComplicated, Sometimes, Literal, FileReference]
         self.saved_args: Dict[str, Any] = {}
         self.found_setup = False
+        self.setup_node: Optional[cst.CSTNode] = None
 
     def visit_Call(self, node: cst.Call) -> Optional[bool]:
         names = self.get_metadata(QualifiedNameProvider, node)
@@ -163,6 +196,7 @@ class SetupCallAnalyzer(cst.CSTVisitor):
             for q in names
         ):
             self.found_setup = True
+            self.setup_node = node
             scope = self.get_metadata(ScopeProvider, node)
             for arg in node.args:
                 # TODO **kwargs

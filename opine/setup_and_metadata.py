@@ -102,4 +102,8 @@ SETUP_ARGS = [
     # namespace_packages list-comma
     # py_modules list-comma
     # data_files dict
+    #
+    # Documented, but not in the table...
+    ConfigField("test_suite", SetupCfg("options", "test_suite"), sample_value=None,),
+    ConfigField("test_loader", SetupCfg("options", "test_loader"), sample_value=None,),
 ]
