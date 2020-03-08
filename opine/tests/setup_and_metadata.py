@@ -44,7 +44,7 @@ class SetupArgsTest(unittest.TestCase):
         [
             (t,)
             for t in SETUP_ARGS
-            if t.keyword not in ("project_urls", "include_package_data")
+            if t.keyword not in ("project_urls", "include_package_data", "setup_requires")
         ]
     )
     def test_arg_mapping(self, field: ConfigField) -> None:

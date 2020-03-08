@@ -1,11 +1,13 @@
+import sys
 from pathlib import Path
+from dataclasses import dataclass
 
 import libcst as cst
 
 from ..metadata import SetupCallAnalyzer
 from ..setup_and_metadata import SETUP_ARGS
 
-
+@dataclass
 class Env:
     base_path: Path
 
@@ -28,5 +30,13 @@ class UseDeclarativeSuggestion(BaseSuggestion):
         if not analyzer.found_setup:
             self.skip("Could not find setup() call in setup.py")
 
+        setup_args_dict = {t.keyword: t for t in SETUP_ARGS}
         for k, v in analyzer.saved_args.items():
-            pass
+            if k in setup_args_dict:
+                print(f"Yay! Could move {k}")
+            else:
+                print(f"Unknown {k}")
+
+
+if __name__ == "__main__":
+    UseDeclarativeSuggestion().check(Env(Path(sys.argv[1])))

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import IntEnum, auto
 from typing import Optional, Type
 
 
@@ -16,14 +15,16 @@ class StrWriter(BaseWriter):
 
 class ListCommaWriter(BaseWriter):
     def to_ini(self, value):
-        # TODO test "dangling" support
-        return "\n".join(value)
+        if not value:
+            return ''
+        return ''.join(f"\n{k}" for k in value)
 
 
 class ListSemiWriter(BaseWriter):
     def to_ini(self, value):
-        # TODO test "dangling" support
-        return "\n".join(value)
+        if not value:
+            return ''
+        return ''.join(f"\n{k}" for k in value)
 
 
 class BoolWriter(BaseWriter):
@@ -33,7 +34,9 @@ class BoolWriter(BaseWriter):
 
 class DictWriter(BaseWriter):
     def to_ini(self, value):
-        return "\n".join(f"{k}={v}" for k, v in value.items())
+        if not value:
+            return ''
+        return ''.join(f"\n{k}={v}" for k, v in value.items())
 
 
 @dataclass

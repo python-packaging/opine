@@ -1,4 +1,4 @@
-from .types import *
+from .types import BoolWriter, ConfigField, DictWriter, SetupCfg, ListSemiWriter
 
 # Not all of these are in the metadata, but for ones that are see
 # https://packaging.python.org/specifications/core-metadata/ for version added
@@ -66,7 +66,10 @@ SETUP_ARGS = [
     # Not written to PKG-INFO
     # [options]
     # zip_safe bool
-    # setup_requires list-semi
+    ConfigField(
+        "setup_requires",
+        SetupCfg("options", "setup_requires", writer_cls=ListSemiWriter),
+    ),
     # install_requires list-semi
     # tests_require list-semi
     ConfigField(
