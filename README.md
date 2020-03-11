@@ -12,9 +12,24 @@ A related project is [honesty](https://pypi.org/project/honesty/), whose job it
 is to make sure that your bdists appear built from the same revision with the
 same contents as your sdists are.
 
+# Usage
+
+```
+opine [-a] /path/to/root
+```
+
+This will run all suggestions and print a sequence of diffs.  If you want to
+apply the changes use `-a`.
+
+# Suggestions
+
+* Move tox.ini to setup.cfg
+* Move coverage.ini to setup.cfg
+* Move static config from setup.py to setup.cfg
+
 # Status
 
-Planning
+Beta
 
 # License
 

@@ -1,31 +1,22 @@
 import io
 import logging
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import imperfect
 import libcst as cst
 import moreorless
 
+import imperfect
+
 from ..metadata import Literal, SetupCallAnalyzer, SetupCallTransformer
 from ..setup_and_metadata import SETUP_ARGS
+from ..types import BaseSuggestion, Env
 
 LOG = logging.getLogger(__name__)
 
 
-@dataclass
-class Env:
-    base_path: Path
-
-
-class BaseSuggestion:
-    def skip(self, msg: str) -> None:
-        raise Exception(msg)  # TODO
-
-
-class UseDeclarativeSuggestion(BaseSuggestion):
+class UseDeclarativeConfig(BaseSuggestion):
     def check(self, env: Env, autoapply: bool = False) -> None:
         # TODO: This duplicates some of the logic in
         # opine.metadata.from_setup_py because we don't want a Distribution and
@@ -89,7 +80,7 @@ class UseDeclarativeSuggestion(BaseSuggestion):
             setup_py.write_text(new_code)
             print("Written")
         elif keywords_to_change:
-            print("Rerun with -a <path> instead to apply")
+            print("Rerun with -a instead to apply")
         else:
             print("No changes")
 
@@ -104,7 +95,7 @@ def main(args: List[str]) -> None:
         level=logging.DEBUG,
         format="%(asctime)-15s %(levelname)-8s %(name)s:%(lineno)s %(message)s",
     )
-    UseDeclarativeSuggestion().check(Env(Path(args[0])), autoapply=autoapply)
+    UseDeclarativeConfig().check(Env(Path(args[0])), autoapply=autoapply)
 
 
 if __name__ == "__main__":

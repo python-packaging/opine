@@ -3,8 +3,9 @@ from configparser import RawConfigParser
 from io import StringIO
 from typing import Dict, List
 
-from imperfect import ConfigFile
 from parameterized import parameterized
+
+from imperfect import ConfigFile
 
 from ..types import BoolWriter, DictWriter, ListCommaWriter, ListSemiWriter, StrWriter
 

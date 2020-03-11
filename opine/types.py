@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
 
@@ -66,3 +67,16 @@ class ConfigField:
     # TODO type/repeated/etc
     cfg: SetupCfg
     sample_value: Optional[Any] = "foo"
+
+
+@dataclass
+class Env:
+    base_path: Path
+
+
+class BaseSuggestion:
+    def check(self, env: Env, autoapply: bool = False) -> None:
+        raise NotImplementedError()
+
+    def skip(self, msg: str) -> None:
+        raise Exception(msg)  # TODO

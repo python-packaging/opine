@@ -69,6 +69,11 @@ SETUP_ARGS = [
     # provides_extra
     # Not written to PKG-INFO
     # [options]
+    ConfigField(
+        "zip_safe",
+        SetupCfg("options", "zip_safe", writer_cls=BoolWriter),
+        sample_value=None,
+    ),
     # zip_safe bool
     ConfigField(
         "setup_requires",
@@ -80,7 +85,11 @@ SETUP_ARGS = [
         SetupCfg("options", "install_requires", writer_cls=ListSemiWriter),
         sample_value=None,
     ),
-    # tests_require list-semi
+    ConfigField(
+        "tests_require",
+        SetupCfg("options", "tests_require", writer_cls=ListSemiWriter),
+        sample_value=None,
+    ),
     ConfigField(
         "include_package_data",
         SetupCfg("options", "include_package_data", writer_cls=BoolWriter),
