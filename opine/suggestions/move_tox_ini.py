@@ -1,6 +1,6 @@
 import logging
 
-import moreorless
+from moreorless.click import echo_color_unified_diff
 
 from imperfect import parse_string
 
@@ -42,9 +42,7 @@ class MoveToxIni(BaseSuggestion):
 
         new_text = setup_cfg.text
         if new_text != setup_cfg_text:
-            print(
-                moreorless.unified_diff(setup_cfg_text, new_text, "setup.cfg"), end=""
-            )
+            echo_color_unified_diff(setup_cfg_text, new_text, "setup.cfg")
             if autoapply:
                 setup_cfg_path.write_text(new_text)
                 tox_ini_path.unlink()

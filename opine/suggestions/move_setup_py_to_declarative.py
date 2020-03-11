@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import libcst as cst
-import moreorless
+from moreorless.click import echo_color_unified_diff
 
 import imperfect
 
@@ -61,7 +61,7 @@ class UseDeclarativeConfig(BaseSuggestion):
         buf = io.StringIO()
         cfg.build(buf)
 
-        print(moreorless.unified_diff(cfg_data, buf.getvalue(), "setup.cfg"), end="")
+        echo_color_unified_diff(cfg_data, buf.getvalue(), "setup.cfg")
 
         old_code = module.code
         transformer = SetupCallTransformer(
@@ -70,7 +70,7 @@ class UseDeclarativeConfig(BaseSuggestion):
         new_module = wrapper.visit(transformer)
         new_code = new_module.code
 
-        print(moreorless.unified_diff(old_code, new_code, "setup.py"), end="")
+        echo_color_unified_diff(old_code, new_code, "setup.py")
 
         # TODO validate that the right args got removed
         # print(f"And remove {sorted(keywords_to_change)}")
