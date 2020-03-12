@@ -92,11 +92,8 @@ class UseDeclarativeConfig(BaseSuggestion):
         if autoapply:
             setup_cfg.write_text(buf.getvalue())
             setup_py.write_text(new_code)
-            print("Written")
         elif keywords_to_change:
             print("Rerun with -a instead to apply")
-        else:
-            print("No changes")
 
 
 def main(args: List[str]) -> None:
