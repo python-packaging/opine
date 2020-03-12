@@ -26,6 +26,7 @@ apply the changes use `-a`.
 * Move tox.ini to setup.cfg
 * Move coverage.ini to setup.cfg
 * Move static config from setup.py to setup.cfg
+* Move setup\_requires to pyproject.toml
 
 # Status
 
