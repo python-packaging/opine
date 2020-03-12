@@ -11,7 +11,7 @@ import imperfect
 
 from ..metadata import Literal, SetupCallAnalyzer, SetupCallTransformer
 from ..setup_and_metadata import SETUP_ARGS
-from ..types import BaseSuggestion, Env
+from ..types import BaseSuggestion, Env, SectionWriter
 
 LOG = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ class UseDeclarativeConfig(BaseSuggestion):
         # want to get the cst object back.
 
         setup_py = env.base_path / "setup.py"
+        if not setup_py.exists():
+            return
         module = cst.parse_module(setup_py.read_text())
         analyzer = SetupCallAnalyzer()
         wrapper = cst.MetadataWrapper(module)
@@ -45,14 +47,26 @@ class UseDeclarativeConfig(BaseSuggestion):
         for k, v in analyzer.saved_args.items():
             # This is a cursory check on the value; really we should get an
             # AlmostTooComplicated or TooComplicated that works well.
-            if k in setup_args_dict and isinstance(v, Literal) and v.value != "??":
+            if (
+                k in setup_args_dict
+                and isinstance(v, Literal)
+                and "??" not in str(v.value)
+            ):
                 LOG.debug(f"{k}: can move {v.value!r}")
                 keywords_to_change[k] = None
-                cfg.set_value(
-                    setup_args_dict[k].cfg.section,
-                    setup_args_dict[k].cfg.key,
-                    setup_args_dict[k].cfg.writer_cls().to_ini(v.value),
-                )
+                if setup_args_dict[k].cfg.writer_cls is SectionWriter:
+                    for k2, v2 in v.value.items():
+                        cfg.set_value(
+                            setup_args_dict[k].cfg.section,
+                            k2,
+                            setup_args_dict[k].cfg.writer_cls().to_ini(v2),
+                        )
+                else:
+                    cfg.set_value(
+                        setup_args_dict[k].cfg.section,
+                        setup_args_dict[k].cfg.key,
+                        setup_args_dict[k].cfg.writer_cls().to_ini(v.value),
+                    )
             elif k in setup_args_dict:
                 LOG.error(f"{k}: too complicated")
             else:

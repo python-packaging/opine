@@ -1,4 +1,13 @@
-from .types import BoolWriter, ConfigField, DictWriter, ListSemiWriter, SetupCfg
+from .types import (
+    BoolWriter,
+    ConfigField,
+    DictWriter,
+    ListCommaWriter,
+    ListCommaWriterCompat,
+    ListSemiWriter,
+    SectionWriter,
+    SetupCfg,
+)
 
 # Not all of these are in the metadata, but for ones that are see
 # https://packaging.python.org/specifications/core-metadata/ for version added
@@ -24,6 +33,9 @@ SETUP_ARGS = [
         "long_description", SetupCfg("metadata", "long_description")
     ),  # Description
     # keywords
+    ConfigField(
+        "keywords", SetupCfg("metadata", "keywords", writer_cls=ListCommaWriterCompat)
+    ),
     # platforms
     # fullname
     # contact
@@ -96,21 +108,54 @@ SETUP_ARGS = [
         sample_value=None,  # True,
     ),
     #
-    # extras_require (section)
+    ConfigField(
+        "extras_require",
+        SetupCfg("options.extras_require", "UNUSED", writer_cls=SectionWriter),
+        sample_value=None,
+    ),
     # use_2to3
     # use_2to3_fixers list-comma
     # use_2to3_exclude_fixers list-comma
     # convert_2to3_doctests list-comma
-    # scripts list-comma
+    ConfigField(
+        "scripts",
+        SetupCfg("options", "scripts", writer_cls=ListCommaWriter),
+        sample_value=None,
+    ),
     # eager_resources list-comma
     # dependency_links list-comma
-    # packages
-    # package_dir
+    ConfigField(
+        "packages",
+        SetupCfg("options", "packages", writer_cls=ListCommaWriter),
+        sample_value=None,
+    ),
+    ConfigField(
+        "package_dir",
+        SetupCfg("options", "package_dir", writer_cls=DictWriter),
+        sample_value=None,
+    ),
+    ConfigField(
+        "package_data",
+        SetupCfg("options.package_data", "UNUSED", writer_cls=SectionWriter),
+        sample_value=None,  # {"foo": ["py.typed"]},
+    ),
     # package_data (section)
     # exclude_package_data (section)
-    # namespace_packages list-comma
-    # py_modules list-comma
-    # data_files dict
+    ConfigField(
+        "namespace_packages",
+        SetupCfg("options", "namespace_packages", writer_cls=ListCommaWriter),
+        sample_value=None,  # ["foo", "bar"],
+    ),
+    ConfigField(
+        "py_modules",
+        SetupCfg("options", "py_modules", writer_cls=ListCommaWriter),
+        sample_value=None,
+    ),
+    ConfigField(
+        "data_files",
+        SetupCfg("options.data_files", "UNUSED", writer_cls=SectionWriter),
+        sample_value=None,
+    ),
     #
     # Documented, but not in the table...
     ConfigField("test_suite", SetupCfg("options", "test_suite"), sample_value=None,),

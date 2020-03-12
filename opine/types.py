@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 
 # These implement the basic types listed at
@@ -22,7 +22,24 @@ class ListCommaWriter(BaseWriter):
         return "".join(f"\n{k}" for k in value)
 
 
+class ListCommaWriterCompat(BaseWriter):
+    def to_ini(self, value: Union[str, List[str]]) -> str:
+        if not value:
+            return ""
+        if isinstance(value, str):
+            value = [value]
+        return "".join(f"\n{k}" for k in value)
+
+
 class ListSemiWriter(BaseWriter):
+    def to_ini(self, value: List[str]) -> str:
+        if not value:
+            return ""
+        return "".join(f"\n{k}" for k in value)
+
+
+# This class is also specialcased
+class SectionWriter(BaseWriter):
     def to_ini(self, value: List[str]) -> str:
         if not value:
             return ""
