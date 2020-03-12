@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from click.testing import CliRunner, Result
 
@@ -16,10 +16,17 @@ SAMPLE_ENV = {
 
 
 class FunctionalTest(unittest.TestCase):
-    def _run_and_get_output(self, args: List[str]) -> Tuple[Result, Dict[str, str]]:
+    def _run_and_get_output(
+        self, args: List[str], extra_files: Optional[Dict[str, str]] = None
+    ) -> Tuple[Result, Dict[str, str]]:
         with tempfile.TemporaryDirectory() as d:
             td_path = Path(d)
-            for filename, contents in SAMPLE_ENV.items():
+            self.files: Dict[str, str] = {}
+            self.files.update(SAMPLE_ENV)
+            if extra_files:
+                self.files.update(extra_files)
+
+            for filename, contents in self.files.items():
                 (td_path / filename).write_text(contents)
 
             runner = CliRunner()
@@ -34,12 +41,31 @@ class FunctionalTest(unittest.TestCase):
     def test_smoke_no_args(self) -> None:
         result, files = self._run_and_get_output([])
         self.assertEqual(0, result.exit_code)
-        self.assertEqual(SAMPLE_ENV, files)
+        self.assertEqual(self.files, files)
+
+    def test_smoke_only_non(self) -> None:
+        result, files = self._run_and_get_output(["--only", "Foo"])
+        self.assertEqual(2, result.exit_code)
+        self.assertEqual(self.files, files)
 
     def test_smoke_only_one(self) -> None:
         result, files = self._run_and_get_output(["--only", "MoveToxIni"])
         self.assertEqual(0, result.exit_code)
-        self.assertEqual(SAMPLE_ENV, files)
+        self.assertEqual(self.files, files)
+
+    def test_smoke_exception(self) -> None:
+        result, files = self._run_and_get_output([], {"setup.py": "--"})
+        self.assertEqual(2, result.exit_code)
+        self.assertEqual(self.files, files)
+        self.assertIn('ParserSyntaxError("Incomplete input', result.output)
+        self.assertNotIn("Traceback (most recent call last)", result.output)
+
+    def test_smoke_exception_verbose(self) -> None:
+        result, files = self._run_and_get_output(["-v"], {"setup.py": "--"})
+        self.assertEqual(2, result.exit_code)
+        self.assertEqual(self.files, files)
+        self.assertIn("ParserSyntaxError: Syntax Error", result.output)
+        self.assertIn("Traceback (most recent call last)", result.output)
 
     def test_smoke_write(self) -> None:
         result, files = self._run_and_get_output(["-a"])

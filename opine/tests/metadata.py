@@ -1,13 +1,15 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
+from typing import Any, List
+from unittest.mock import patch
 
 import libcst as cst
 from libcst.metadata import ParentNodeProvider, ScopeProvider
 from parameterized import parameterized
 
-from opine.metadata import Distribution, SetupCallAnalyzer, from_setup_py
+from opine.metadata import Distribution, SetupCallAnalyzer, from_setup_py, main
 
 
 class DistributionTest(unittest.TestCase):
@@ -152,6 +154,33 @@ class EvaluateTest(unittest.TestCase):
         scope = next(iter(analyzer.metadata[ScopeProvider].values()))
         actual = analyzer.evaluate_in_scope(cst.Name(value="final"), scope)
         self.assertEqual(expected, actual)
+
+
+class MainTest(unittest.TestCase):
+    @patch("opine.metadata.print")
+    def test_main(self, print_mock: Any) -> None:
+        buf: List[str] = []
+        print_mock.side_effect = buf.append
+        with tempfile.TemporaryDirectory() as d:
+            sp = Path(d, "setup.py")
+            sp.write_text(
+                "from setuptools import setup\nsetup(setup_requires=['abc'])\n"
+            )
+            sys.argv = ["main", d]
+            main()
+        self.assertTrue('"setup_requires": ' in buf[-1])
+
+    @patch("opine.metadata.print")
+    @patch("opine.metadata.traceback.print_exc")
+    def test_main_fail(self, print_exc_mock: Any, print_mock: Any) -> None:
+        buf: List[str] = []
+        print_mock.side_effect = lambda x, **kwargs: buf.append(x)
+        with tempfile.TemporaryDirectory() as d:
+            sp = Path(d, "setup.py")
+            sp.write_text("from setuptools import setup\nsetup(setup_requires\n")
+            sys.argv = ["main", d]
+            main()
+        self.assertTrue(buf[-1].startswith("Fail:"))
 
 
 if __name__ == "__main__":

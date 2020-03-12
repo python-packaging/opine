@@ -1,8 +1,6 @@
 import io
 import logging
-import sys
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import libcst as cst
 from moreorless.click import echo_color_unified_diff
@@ -94,20 +92,3 @@ class UseDeclarativeConfig(BaseSuggestion):
             setup_py.write_text(new_code)
         elif keywords_to_change:
             print("Rerun with -a instead to apply")
-
-
-def main(args: List[str]) -> None:
-    autoapply = False
-    if args and args[0] == "-a":
-        autoapply = True
-        args.pop(0)
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)-15s %(levelname)-8s %(name)s:%(lineno)s %(message)s",
-    )
-    UseDeclarativeConfig().check(Env(Path(args[0])), autoapply=autoapply)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

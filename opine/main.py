@@ -1,4 +1,5 @@
 import logging
+import sys
 import traceback
 from pathlib import Path
 from typing import Optional
@@ -46,6 +47,8 @@ def main(verbose: bool, autoapply: bool, only: Optional[str], path: str) -> None
             else:
                 print(repr(e))
 
+    sys.exit(rc)
 
-if __name__ == "__main__":
+
+if __name__ == "__main__":  # pragma: no cover
     main()

@@ -1,4 +1,5 @@
 import configparser
+import os
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,9 @@ def egg_info(files: Dict[str, str]) -> Dict[str, str]:
     return dict(c1["config"])
 
 
+# These tests do not increase coverage, and just verify that we have the right
+# static data.
+@unittest.skipIf("SKIP_ARGS_TEST" in os.environ, "SKIP_ARGS_TEST")
 class SetupArgsTest(unittest.TestCase):
     @parameterized.expand(  # type: ignore
         [(t,) for t in SETUP_ARGS if t.sample_value is not None]

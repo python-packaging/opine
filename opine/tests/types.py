@@ -1,13 +1,22 @@
 import unittest
 from configparser import RawConfigParser
 from io import StringIO
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from parameterized import parameterized
 
 from imperfect import ConfigFile
 
-from ..types import BoolWriter, DictWriter, ListCommaWriter, ListSemiWriter, StrWriter
+from ..types import (
+    BaseSuggestion,
+    BoolWriter,
+    DictWriter,
+    ListCommaWriter,
+    ListCommaWriterCompat,
+    ListSemiWriter,
+    SectionWriter,
+    StrWriter,
+)
 
 
 class WriterTest(unittest.TestCase):
@@ -74,7 +83,13 @@ class WriterTest(unittest.TestCase):
         self.assertEqual(expected, rcp["a"]["b"])
 
     @parameterized.expand(  # type: ignore
-        [({}, ""), ({"x": "y"}, "\nx=y"), ({"x": "y", "z": "zz"}, "\nx=y\nz=zz"),]
+        # fmt: off
+        [
+            ({}, ""),
+            ({"x": "y"}, "\nx=y"),
+            ({"x": "y", "z": "zz"}, "\nx=y\nz=zz"),
+        ]
+        # fmt: on
     )
     def test_dict_writer(self, arg: Dict[str, str], expected: str) -> None:
         c = ConfigFile()
@@ -86,3 +101,54 @@ class WriterTest(unittest.TestCase):
         rcp.read_string(buf.getvalue())
         # I would prefer this be dangling lines
         self.assertEqual(expected, rcp["a"]["b"])
+
+    @parameterized.expand(  # type: ignore
+        # fmt: off
+        [
+            ([], ""),
+            ("abc", "\nabc"),
+            (["a"], "\na"),
+            (["a", "b"], "\na\nb"),
+            (["a", "b", "c"], "\na\nb\nc"),
+        ]
+        # fmt: on
+    )
+    def test_list_comma_writer_compat(
+        self, arg: Union[str, List[str]], expected: str
+    ) -> None:
+        c = ConfigFile()
+        c.set_value("a", "b", ListCommaWriterCompat().to_ini(arg))
+        buf = StringIO()
+        c.build(buf)
+
+        rcp = RawConfigParser(strict=False)
+        rcp.read_string(buf.getvalue())
+        # I would prefer this be dangling lines
+        self.assertEqual(expected, rcp["a"]["b"])
+
+    @parameterized.expand(  # type: ignore
+        [
+            ([], ""),
+            (["a"], "\na"),
+            (["a", "b"], "\na\nb"),
+            (["a", "b", "c"], "\na\nb\nc"),
+        ]
+    )
+    def test_section_writer(self, arg: List[str], expected: str) -> None:
+        c = ConfigFile()
+        c.set_value("a", "b", SectionWriter().to_ini(arg))
+        buf = StringIO()
+        c.build(buf)
+
+        rcp = RawConfigParser(strict=False)
+        rcp.read_string(buf.getvalue())
+        self.assertEqual(expected, rcp["a"]["b"])
+
+
+class BaseSuggestionTest(unittest.TestCase):
+    def test_base(self) -> None:
+        b = BaseSuggestion()
+        with self.assertRaises(NotImplementedError):
+            b.check(None)  # type: ignore
+        with self.assertRaisesRegex(Exception, "foo"):
+            b.skip("foo")
