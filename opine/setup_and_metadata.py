@@ -160,4 +160,9 @@ SETUP_ARGS = [
     # Documented, but not in the table...
     ConfigField("test_suite", SetupCfg("options", "test_suite"), sample_value=None,),
     ConfigField("test_loader", SetupCfg("options", "test_loader"), sample_value=None,),
+    ConfigField(
+        "entry_points",
+        SetupCfg("options.entry_points", "UNUSED", writer_cls=SectionWriter),
+        sample_value=None,
+    ),
 ]
