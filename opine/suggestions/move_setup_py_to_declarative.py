@@ -3,13 +3,18 @@ import logging
 from typing import Dict, Optional
 
 import libcst as cst
+from dowsing.setuptools.setup_and_metadata import SETUP_ARGS
+from dowsing.setuptools.setup_py_parsing import (
+    Literal,
+    SetupCallAnalyzer,
+    SetupCallTransformer,
+)
+from dowsing.setuptools.types import SectionWriter
 from moreorless.click import echo_color_unified_diff
 
 import imperfect
 
-from ..metadata import Literal, SetupCallAnalyzer, SetupCallTransformer
-from ..setup_and_metadata import SETUP_ARGS
-from ..types import BaseSuggestion, Env, SectionWriter
+from ..types import BaseSuggestion, Env
 
 LOG = logging.getLogger(__name__)
 
@@ -17,7 +22,7 @@ LOG = logging.getLogger(__name__)
 class UseDeclarativeConfig(BaseSuggestion):
     def check(self, env: Env, autoapply: bool = False) -> None:
         # TODO: This duplicates some of the logic in
-        # opine.metadata.from_setup_py because we don't want a Distribution and
+        # setup_py_parsing because we don't want a Distribution and
         # want to get the cst object back.
 
         setup_py = env.base_path / "setup.py"
@@ -65,9 +70,9 @@ class UseDeclarativeConfig(BaseSuggestion):
                         setup_args_dict[k].cfg.key,
                         setup_args_dict[k].cfg.writer_cls().to_ini(v.value),
                     )
-            elif k in setup_args_dict:
+            elif k in setup_args_dict:  # pragma: no cover
                 LOG.error(f"{k}: too complicated")
-            else:
+            else:  # pragma: no cover
                 LOG.debug(f"{k}: unknown keyword")
 
         buf = io.StringIO()

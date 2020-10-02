@@ -1,15 +1,11 @@
+from ..suggestions.tests.move_setup_py_to_declarative import (
+    MoveSetupPyToDeclarativeTest,
+)
 from .functional import FunctionalTest
-from .metadata import DistributionTest, EvaluateTest, MainTest, MetadataTest
-from .setup_and_metadata import SetupArgsTest
-from .types import BaseSuggestionTest, WriterTest
+from .types import BaseSuggestionTest
 
 __all__ = [
     "FunctionalTest",
-    "DistributionTest",
-    "EvaluateTest",
-    "MetadataTest",
-    "MainTest",
-    "SetupArgsTest",
     "BaseSuggestionTest",
-    "WriterTest",
+    "MoveSetupPyToDeclarativeTest",
 ]
