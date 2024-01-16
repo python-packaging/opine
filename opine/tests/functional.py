@@ -17,17 +17,18 @@ SAMPLE_ENV = {
 
 class FunctionalTest(unittest.TestCase):
     def _run_and_get_output(
-        self, args: List[str], extra_files: Optional[Dict[str, str]] = None
+        self, args: List[str], extra_files: Optional[Dict[str, Optional[str]]] = None
     ) -> Tuple[Result, Dict[str, str]]:
         with tempfile.TemporaryDirectory() as d:
             td_path = Path(d)
-            self.files: Dict[str, str] = {}
+            self.files: Dict[str, Optional[str]] = {}
             self.files.update(SAMPLE_ENV)
             if extra_files:
                 self.files.update(extra_files)
 
             for filename, contents in self.files.items():
-                (td_path / filename).write_text(contents)
+                if contents is not None:
+                    (td_path / filename).write_text(contents)
 
             runner = CliRunner()
             result = runner.invoke(main, args + [d])
@@ -70,6 +71,12 @@ class FunctionalTest(unittest.TestCase):
         self.assertIn("ParserSyntaxError: Syntax Error", result.output)
         self.assertIn("Traceback (most recent call last)", result.output)
 
+    def test_smoke_skip(self) -> None:
+        result, files = self._run_and_get_output(["-v"], {"setup.py": "pass"})
+        self.assertEqual(2, result.exit_code)
+        self.assertEqual(self.files, files)
+        self.assertIn("Could not find setup() call in setup.py", result.output)
+
     def test_smoke_write(self) -> None:
         result, files = self._run_and_get_output(["-a"])
         self.assertEqual(0, result.exit_code)
@@ -99,4 +106,9 @@ envlist=py36
 commands=make
 """,
             files["setup.cfg"],
+        )
+
+    def test_smoke_noop(self) -> None:
+        result, files = self._run_and_get_output(
+            ["-a"], extra_files={"coverage.ini": None}
         )
