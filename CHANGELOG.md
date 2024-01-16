@@ -1,3 +1,8 @@
+## v0.6.0
+
+* Compatible with python 3.8-3.12, require newer libcst
+* Depend on setuptools explicitly
+
 ## v0.5.1
 
 * No longer unconditionally move `setup_requires`
