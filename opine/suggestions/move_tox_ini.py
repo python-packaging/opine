@@ -1,8 +1,8 @@
 import logging
 
-from moreorless.click import echo_color_unified_diff
-
 from imperfect import parse_string
+
+from moreorless.click import echo_color_unified_diff
 
 from ..types import BaseSuggestion, Env
 

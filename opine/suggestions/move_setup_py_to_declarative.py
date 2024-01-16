@@ -2,6 +2,8 @@ import io
 import logging
 from typing import Dict, Optional
 
+import imperfect
+
 import libcst as cst
 from dowsing.setuptools.setup_and_metadata import SETUP_ARGS
 from dowsing.setuptools.setup_py_parsing import (
@@ -11,8 +13,6 @@ from dowsing.setuptools.setup_py_parsing import (
 )
 from dowsing.setuptools.types import SectionWriter
 from moreorless.click import echo_color_unified_diff
-
-import imperfect
 
 from ..types import BaseSuggestion, Env
 

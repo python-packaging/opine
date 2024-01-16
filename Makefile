@@ -35,3 +35,8 @@ release:
 	rm -rf dist
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
+
+.PHONY: pessimist
+pessimist:
+	python -m pessimist --fast --requirements= -c 'python -m opine --help' .
+

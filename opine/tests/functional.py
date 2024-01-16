@@ -57,7 +57,10 @@ class FunctionalTest(unittest.TestCase):
         result, files = self._run_and_get_output([], {"setup.py": "--"})
         self.assertEqual(2, result.exit_code)
         self.assertEqual(self.files, files)
-        self.assertIn('ParserSyntaxError("Incomplete input', result.output)
+        # Old libcst
+        # self.assertIn('ParserSyntaxError("Incomplete input', result.output)
+        # New libcst
+        self.assertIn("ParserSyntaxError('parser error: error at 1:2", result.output)
         self.assertNotIn("Traceback (most recent call last)", result.output)
 
     def test_smoke_exception_verbose(self) -> None:
